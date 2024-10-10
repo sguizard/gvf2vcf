@@ -44,7 +44,7 @@ def seq(x):
         return x
 
 
-def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name):
+def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name, add_header):
     today = date.today()
     today.strftime("%Y%m%d")
     header = '##fileformat=VCFv4.1\n' \
