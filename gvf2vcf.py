@@ -44,7 +44,7 @@ def seq(x):
         return x
 
 
-def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source):
+def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name):
     today = date.today()
     today.strftime("%Y%m%d")
     header = '##fileformat=VCFv4.1\n' \
@@ -69,28 +69,31 @@ def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source):
     f = open(gvf_file.split('gvf')[0] + 'vcf', "w")
     f.write(header)
     f.close()
+
     # write VCF file
     # sort df
     # '#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO'
     vcf_df = vcf_df.sort_values(by=['#CHROM', 'POS'], ascending=True)
-    vcf_df.to_csv(gvf_file.split('gvf')[0] + 'vcf', index=False, mode='a', sep='\t')
+    vcf_df.to_csv(gvf_file.split('gvf')[0] + chr_name + '.vcf', index=False, mode='a', sep='\t')
+
     print('VCF file successfully has been generated!')
 
 
-def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source):
+def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name):
     # add new columns
-    gvf_df['QUAL'] = '.'
+    gvf_df['QUAL']   = '.'
     gvf_df['FILTER'] = '.'
-    gvf_df['ref_N'] = ''
-    gvf_df['INFO'] = 'TSA=' + gvf_df['TSA'] + ';' + gvf_df['DB'] + ';' + gvf_df['INFO']
-    INDEL_df = gvf_df.loc[gvf_df['TSA'] != 'SNV']
+    gvf_df['ref_N']  = ''
+    gvf_df['INFO']   = 'TSA=' + gvf_df['TSA'] + ';' + gvf_df['DB'] + ';' + gvf_df['INFO']
+    INDEL_df         = gvf_df.loc[gvf_df['TSA'] != 'SNV']
     global ref_gene
+    
     if INDEL_df.shape[0] > 0:
         # read reference genome
         for chr in INDEL_df['#CHROM'].unique():
             print('chromosome: ' + chr)
             ref_gene = parse_reference_genome(reference_genome_file, chr, ref_genome_db)
-            chr_df = gvf_df.loc[(gvf_df['TSA'] != 'SNV') & (gvf_df['#CHROM'] == chr)]
+            chr_df   = gvf_df.loc[(gvf_df['TSA'] != 'SNV') & (gvf_df['#CHROM'] == chr)]
 
             if chr_df.shape[0] > 0:
                 # modify REF & ALT
@@ -104,10 +107,10 @@ def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_nam
     vcf_df = gvf_df[['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']]
 
     # write to csv file
-    write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source)
+    write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name)
 
 
-def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name_list):
+def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name):
     """
     goal: parsing GVF file format
     :param gvf_file GVF file directory
@@ -115,35 +118,34 @@ def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name_list
     @param ref_genome_db str 'ensembl' or 'ucsc'
     :return: VCF file
     """
-    body = []
-    ref_genome_name = ''
-    source = ''
     global genome_browser
-    genome_browser = ref_genome_db
+    body            = []
+    ref_genome_name = ''
+    source          = ''
+    genome_browser  = ref_genome_db
+
     with gzip.open(gvf_file, 'rb') as f:
         for line in f:
             if not str(line)[2:-3].startswith("#"):
                 splitted_line = str(line)[2:-3].split('\\t')
-                info_list = {k[0]: k[1] for k in list(map(lambda x: x.split('='), splitted_line[-1].split(';')))}
-                [db, db_id] = info_list['Dbxref'].split(':')
-                info = ';'.join(['E_' + info_list[k] for k in info_list.keys()
-                                 if k not in ['ID', 'Variant_seq', 'Dbxref', 'Reference_seq']])
+                info_list     = {k[0]: k[1] for k in list(map(lambda x: x.split('='), splitted_line[-1].split(';')))}
+                [db, db_id]   = info_list['Dbxref'].split(':')
+                info          = ';'.join(['E_' + info_list[k] for k in info_list.keys() if k not in ['ID', 'Variant_seq', 'Dbxref', 'Reference_seq']])
 
-                if splitted_line[0] in chr_name_list and splitted_line[2] in ['deletion', 'insertion',
-                                                                              'sequence_alteration', 'SNV']:
-                    body.append(splitted_line[:-1] + [info_list['ID'], info_list['Variant_seq'], db, db_id,
-                                                      info_list['Reference_seq'], info])
+                if splitted_line[0] in chr_name and splitted_line[2] in ['deletion', 'insertion', 'sequence_alteration', 'SNV']:
+                    body.append(splitted_line[:-1] + [info_list['ID'], info_list['Variant_seq'], db, db_id, info_list['Reference_seq'], info])
             else:
                 if str(line)[2:-3].startswith("##genome-build"):
                     ref_genome_name = str(line)[2:-3].split("##genome-build")[1].rstrip().lstrip()
                 elif str(line)[2:-3].startswith("##data-source"):
                     source = 's' + str(line)[2:-3].split("data-source S")[1].rstrip().lstrip()
-    dbSNP_v = db
-    gvf_df = pd.DataFrame(body, columns=['#CHROM', 'db', 'TSA', 'POS', 'end_pos', 'unknown_flag', 'SNV_flag',
-                                         'INDEL_flag', 'id', 'ALT', 'DB', 'ID', 'REF', 'INFO'])
+
+    dbSNP_v       = db
+    gvf_df        = pd.DataFrame(body, columns=['#CHROM', 'db', 'TSA', 'POS', 'end_pos', 'unknown_flag', 'SNV_flag', 'INDEL_flag', 'id', 'ALT', 'DB', 'ID', 'REF', 'INFO'])
     gvf_df['POS'] = gvf_df['POS'].astype(int)
+
     # convert column type
-    convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source)
+    convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name)
 
 
 
