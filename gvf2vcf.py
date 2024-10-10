@@ -1,5 +1,8 @@
+import sys
+import argparse
 import gzip
 import pandas as pd
+import time
 from ParseRefGene import parse_reference_genome
 from datetime import date
 
@@ -46,22 +49,22 @@ def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source):
     today = date.today()
     today.strftime("%Y%m%d")
     header = '##fileformat=VCFv4.1\n' \
-             '##fileDate=' + str(today).replace("-", "") + '\n' \
-                                                           '##' + source + '\n' \
-                                                                           '##reference=' + ref_genome_name + '\n' \
-                                                                                                              '##INFO=<ID=' + dbSNP_v + ',Number=0,Type=Flag,Description="Variants (including SNPs and indels) ' \
-                                                                                                                                        'imported from dbSNP [Remapped to ' + ref_genome_name + ']">\n' \
-                                                                                                                                                                                                '##INFO=<ID=TSA,Number=1,Type=String,Description="Type of sequence alteration. Child of term sequence_alteration as defined by the sequence ontology project.">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_Cited,Number=0,Type=Flag,Description="Cited.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_Multiple_observations,Number=0,Type=Flag,Description="Multiple_observations.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_Freq,Number=0,Type=Flag,Description="Frequency.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_TOPMed,Number=0,Type=Flag,Description="TOPMed.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_Hapmap,Number=0,Type=Flag,Description="HapMap.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_Phenotype_or_Disease,Number=0,Type=Flag,Description="Phenotype_or_Disease.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_ESP,Number=0,Type=Flag,Description="ESP.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_gnomAD,Number=0,Type=Flag,Description="gnomAD.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_1000G,Number=0,Type=Flag,Description="1000Genomes.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
-                                                                                                                                                                                                '##INFO=<ID=E_ExAC,Number=0,Type=Flag,Description="ExAC.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n'
+            '##fileDate=' + str(today).replace("-", "") + '\n' \
+            '##' + source + '\n' \
+            '##reference=' + ref_genome_name + '\n' \
+            '##INFO=<ID=' + dbSNP_v + ',Number=0,Type=Flag,Description="Variants (including SNPs and indels) ' \
+            'imported from dbSNP [Remapped to ' + ref_genome_name + ']">\n' \
+            '##INFO=<ID=TSA,Number=1,Type=String,Description="Type of sequence alteration. Child of term sequence_alteration as defined by the sequence ontology project.">\n' \
+            '##INFO=<ID=E_Cited,Number=0,Type=Flag,Description="Cited.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_Multiple_observations,Number=0,Type=Flag,Description="Multiple_observations.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_Freq,Number=0,Type=Flag,Description="Frequency.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_TOPMed,Number=0,Type=Flag,Description="TOPMed.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_Hapmap,Number=0,Type=Flag,Description="HapMap.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_Phenotype_or_Disease,Number=0,Type=Flag,Description="Phenotype_or_Disease.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_ESP,Number=0,Type=Flag,Description="ESP.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_gnomAD,Number=0,Type=Flag,Description="gnomAD.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_1000G,Number=0,Type=Flag,Description="1000Genomes.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
+            '##INFO=<ID=E_ExAC,Number=0,Type=Flag,Description="ExAC.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n'
 
     # write header
     f = open(gvf_file.split('gvf')[0] + 'vcf', "w")
@@ -142,3 +145,102 @@ def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name_list
     gvf_df['POS'] = gvf_df['POS'].astype(int)
     # convert column type
     convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source)
+
+
+
+# ParseRefGene.py
+def parse_ensembl_reference_genome(reference_genome, selected_chr):
+    """
+    goal: parsing reference genome provided by Ensembl
+    @param reference_genome str reference genome directory and file name
+    @param selected_chr str selected chromosome
+    @return: genome  dictionary key: selected chromosome value: list of selected chromosome sequences
+    (each sequence line is stored in a list)
+    """
+    genome = {selected_chr: []}
+    read = False
+    with gzip.open(reference_genome, 'rb') as f:
+        for line in f:
+            if str(line)[2:-3].startswith('>' + selected_chr.lstrip().rstrip()):
+                read = True
+            elif str(line)[2:-3].startswith('>'):
+                if read:
+                    break
+                else:
+                    pass
+            else:
+                if read:
+                    genome[selected_chr].append(str(line)[2:-3])
+    return genome
+
+
+
+def parse_ucsc_reference_genome(reference_genome, selected_chr):
+
+    """
+    goal: parsing reference genome provided by UCSC
+    @param reference_genome str reference genome directory and file name
+    @param selected_chr str selected chromosome
+    @return: genome  dictionary key: selected chromosome value: list of selected chromosome sequences
+    (each sequence line is stored in a list)
+    """
+    genome = {selected_chr: []}
+    read = False
+    with gzip.open(reference_genome, 'rb') as f:
+        for line in f:
+            if str(line)[2:-3].startswith('>chr' + selected_chr.lstrip().rstrip()):
+                read = True
+            elif str(line)[2:-3].startswith('>chr'):
+                if read:
+                    break
+                else:
+                    pass
+            else:
+                if read:
+                    genome[selected_chr].append(str(line)[2:-3])
+    return genome
+
+
+def parse_reference_genome(reference_genome, selected_chr, ref_genome_db):
+
+    """
+    goal: calling genome parser function according to reference genome db
+    @param reference_genome str reference genome directory and file name
+    @param selected_chr str selected chromosome
+    @param ref_genome_db str 'ensembl' or 'ucsc'
+    @return: genome  dictionary key: selected chromosome value: list of selected chromosome sequences
+    (each sequence line is stored in a list)
+    """
+
+    if ref_genome_db == 'ensembl':
+        return parse_ensembl_reference_genome(reference_genome, selected_chr)
+    elif ref_genome_db == 'ucsc':
+        return parse_ucsc_reference_genome(reference_genome, selected_chr)
+
+
+
+# RunScript.py
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Process GVF and reference genome files.')
+    parser.add_argument('--gvf_file'             , type=str, default=None     , help='Path to the GVF file')
+    parser.add_argument('--reference_genome_file', type=str, default=None     , help='Path to the reference genome file')
+    parser.add_argument('--chr_name'             , type=str, default=None     , help='Chromosome name to process')
+    parser.add_argument('--ref_genome_db'        , type=str, default='ensembl', help='Reference genome database to use', choices=['ensembl', 'ucsc'], )
+
+    args = parser.parse_args()
+
+    gvf_file              = args.gvf_file
+    reference_genome_file = args.reference_genome_file
+    ref_genome_db         = args.ref_genome_db
+    chr_name              = args.chr_name
+
+    if gvf_file is None or reference_genome_file is None or chr_name is None:
+        print("Error: gvf_file, reference_genome_file, and chr_name must be specified.")
+        sys.exit(1)
+
+    start_time = time.time()
+
+    # run script
+    print(f"Starting script at {time.ctime(start_time)}")
+    parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name)
+    print("--- %s seconds ---" % (time.time() - start_time))
