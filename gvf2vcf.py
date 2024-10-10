@@ -3,7 +3,6 @@ import argparse
 import gzip
 import pandas as pd
 import time
-from ParseRefGene import parse_reference_genome
 from datetime import date
 
 
