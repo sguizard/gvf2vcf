@@ -65,9 +65,10 @@ def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name)
             '##INFO=<ID=E_1000G,Number=0,Type=Flag,Description="1000Genomes.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n' \
             '##INFO=<ID=E_ExAC,Number=0,Type=Flag,Description="ExAC.https://www.ensembl.org/info/genome/variation/prediction/variant_quality.html#evidence_status">\n'
 
+    f = open(gvf_file.split('gvf')[0] + chr_name + '.vcf', "w")
     # write header
-    f = open(gvf_file.split('gvf')[0] + 'vcf', "w")
-    f.write(header)
+    if add_header:
+        f.write(header)
     f.close()
 
     # write VCF file
@@ -79,7 +80,7 @@ def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name)
     print('VCF file successfully has been generated!')
 
 
-def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name):
+def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name, add_header):
     # add new columns
     gvf_df['QUAL']   = '.'
     gvf_df['FILTER'] = '.'
@@ -107,10 +108,10 @@ def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_nam
     vcf_df = gvf_df[['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']]
 
     # write to csv file
-    write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name)
+    write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name, add_header)
 
 
-def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name):
+def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add_header):
     """
     goal: parsing GVF file format
     :param gvf_file GVF file directory
@@ -145,7 +146,7 @@ def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name):
     gvf_df['POS'] = gvf_df['POS'].astype(int)
 
     # convert column type
-    convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name)
+    convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name, add_header)
 
 
 
@@ -226,7 +227,8 @@ if __name__ == '__main__':
     parser.add_argument('--gvf_file'             , type=str, default=None     , help='Path to the GVF file')
     parser.add_argument('--reference_genome_file', type=str, default=None     , help='Path to the reference genome file')
     parser.add_argument('--chr_name'             , type=str, default=None     , help='Chromosome name to process')
-    parser.add_argument('--ref_genome_db'        , type=str, default='ensembl', help='Reference genome database to use', choices=['ensembl', 'ucsc'], )
+    parser.add_argument('--ref_genome_db'        , type=str, default='ensembl', help='Reference genome database', choices=['ensembl', 'ucsc'], )
+    parser.add_argument('--add_header'           , action='store_true'        , help='Add header to the VCF')
 
     args = parser.parse_args()
 
@@ -234,6 +236,7 @@ if __name__ == '__main__':
     reference_genome_file = args.reference_genome_file
     ref_genome_db         = args.ref_genome_db
     chr_name              = args.chr_name
+    add_header            = args.add_header
 
     if gvf_file is None or reference_genome_file is None or chr_name is None:
         print("Error: gvf_file, reference_genome_file, and chr_name must be specified.")
@@ -243,5 +246,5 @@ if __name__ == '__main__':
 
     # run script
     print(f"Starting script at {time.ctime(start_time)}")
-    parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name)
+    parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add_header)
     print("--- %s seconds ---" % (time.time() - start_time))
