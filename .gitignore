@@ -154,3 +154,4 @@ cython_debug/
 *.xml
 input/canFam3.fa.gz
 input/canis_lupus_familiaris_CanFam3.1.gvf.gz
+Ovis_aries_rambouillet*
