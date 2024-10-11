@@ -1,0 +1,16 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal", 
+            "args": ["--gvf_file", "sloubi.gvf.gz", "--reference_genome_file", "Ovis_aries_rambouillet.ARS-UI_Ramb_v2.0.dna.toplevel.fa.gz", "--chr_name", "JAEVFA010000113.1", "--add_header", "--add_gt"]
+        }
+    ]
+}
