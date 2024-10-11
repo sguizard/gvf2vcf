@@ -44,7 +44,7 @@ def seq(x):
         return x
 
 
-def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name, add_header):
+def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name, add_header, add_gt):
     today = date.today()
     today.strftime("%Y%m%d")
     header = '##fileformat=VCFv4.1\n' \
@@ -73,14 +73,22 @@ def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name,
 
     # write VCF file
     # sort df
-    # '#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO'
-    vcf_df = vcf_df.sort_values(by=['#CHROM', 'POS'], ascending=True)
-    vcf_df.to_csv(gvf_file.split('gvf')[0] + chr_name + '.vcf', index=False, mode='a', sep='\t')
+    # '#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'ENS'
+    vcf_df           = vcf_df.sort_values(by=['#CHROM', 'POS'], ascending=True)
+
+    if add_gt:
+        vcf_df['FORMAT'] = "GT"
+        vcf_df['ENS']    = "0|1"
+
+    if add_header:
+        vcf_df.to_csv(gvf_file.split('gvf')[0] + chr_name + '.vcf', index=False, mode='a', sep='\t', header=True)
+    else:
+        vcf_df.to_csv(gvf_file.split('gvf')[0] + chr_name + '.vcf', index=False, mode='a', sep='\t', header=False)
 
     print('VCF file successfully has been generated!')
 
 
-def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name, add_header):
+def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name, add_header, add_gt):
     # add new columns
     gvf_df['QUAL']   = '.'
     gvf_df['FILTER'] = '.'
@@ -108,10 +116,10 @@ def convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_nam
     vcf_df = gvf_df[['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']]
 
     # write to csv file
-    write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name, add_header)
+    write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name, add_header, add_gt)
 
 
-def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add_header):
+def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add_header, add_gt):
     """
     goal: parsing GVF file format
     :param gvf_file GVF file directory
@@ -146,7 +154,7 @@ def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add
     gvf_df['POS'] = gvf_df['POS'].astype(int)
 
     # convert column type
-    convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name, add_header)
+    convert_vcf(gvf_file, gvf_df, reference_genome_file, dbSNP_v, ref_genome_name, ref_genome_db, source, chr_name, add_header, add_gt)
 
 
 
@@ -229,6 +237,7 @@ if __name__ == '__main__':
     parser.add_argument('--chr_name'             , type=str, default=None     , help='Chromosome name to process')
     parser.add_argument('--ref_genome_db'        , type=str, default='ensembl', help='Reference genome database', choices=['ensembl', 'ucsc'], )
     parser.add_argument('--add_header'           , action='store_true'        , help='Add header to the VCF')
+    parser.add_argument('--add_gt'               , action='store_true'        , help='Add FORMAT and ENS columns filled with GT and 0|1 (for STAR+WASP)')
 
     args = parser.parse_args()
 
@@ -237,6 +246,7 @@ if __name__ == '__main__':
     ref_genome_db         = args.ref_genome_db
     chr_name              = args.chr_name
     add_header            = args.add_header
+    add_gt                = args.add_gt
 
     if gvf_file is None or reference_genome_file is None or chr_name is None:
         print("Error: gvf_file, reference_genome_file, and chr_name must be specified.")
@@ -246,5 +256,5 @@ if __name__ == '__main__':
 
     # run script
     print(f"Starting script at {time.ctime(start_time)}")
-    parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add_header)
+    parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add_header, add_gt)
     print("--- %s seconds ---" % (time.time() - start_time))
