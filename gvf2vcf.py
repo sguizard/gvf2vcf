@@ -74,7 +74,7 @@ def write_vcf_file(gvf_file, vcf_df, dbSNP_v, ref_genome_name, source, chr_name,
     # write VCF file
     # sort df
     # '#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'ENS'
-    vcf_df           = vcf_df.sort_values(by=['#CHROM', 'POS'], ascending=True)
+    vcf_df = vcf_df.sort_values(by=['#CHROM', 'POS'], ascending=True)
 
     if add_gt:
         vcf_df['FORMAT'] = "GT"
@@ -141,7 +141,7 @@ def parse_gvf_file(gvf_file, reference_genome_file, ref_genome_db, chr_name, add
                 [db, db_id]   = info_list['Dbxref'].split(':')
                 info          = ';'.join(['E_' + info_list[k] for k in info_list.keys() if k not in ['ID', 'Variant_seq', 'Dbxref', 'Reference_seq']])
 
-                if splitted_line[0] in chr_name and splitted_line[2] in ['deletion', 'insertion', 'sequence_alteration', 'SNV']:
+                if splitted_line[0] == chr_name and splitted_line[2] in ['deletion', 'insertion', 'sequence_alteration', 'SNV']:
                     body.append(splitted_line[:-1] + [info_list['ID'], info_list['Variant_seq'], db, db_id, info_list['Reference_seq'], info])
             else:
                 if str(line)[2:-3].startswith("##genome-build"):
